@@ -156,10 +156,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     final String type = (data['type'] as String?) ??
         (requestId != null ? 'request' : 'general');
 
-    final String title = rawTitle
-        .replaceAll('🚨 ', '')
-        .replaceAll('⚠️ ', '')
-        .trim();
+    final String title = rawTitle.trim();
 
     late IconData icon;
     late Color iconColorActive;
@@ -199,7 +196,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         actionLabel = (requestId != null) ? 'View details' : null;
     }
 
-    // ─── The single urgency signal: a bold left bar (critical/urgent only) ───
     Color? accent;
     if (urgency == 'critical') {
       accent = AppColors.critical;
