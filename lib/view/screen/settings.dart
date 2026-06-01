@@ -50,9 +50,6 @@ class _SettingsState extends State<Settings> {
     if (mounted) setState(() => _isLoading = false);
   }
 
-  // Writes the preference to /users. Your future onBloodRequestCreated
-  // fan-out function will check this flag before pushing an alert, so this
-  // toggle genuinely controls whether the donor gets notified.
   Future<void> _toggleNotifications(bool value) async {
     final user = _auth.currentUser;
     if (user == null) return;
@@ -107,9 +104,6 @@ class _SettingsState extends State<Settings> {
 
     if (confirmed != true) return;
 
-    // Clear FCM token BEFORE sign-out so the leftover doesn't keep
-    // receiving pushes for this account on this device. Must run while
-    // we still have auth permission to write /users/{uid}.
     await NotificationService().removeToken();
     await _auth.signOut();
     _store.erase();
