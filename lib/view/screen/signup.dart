@@ -30,7 +30,7 @@ class _SignupScreenState extends State<SignupScreen> {
   final passwordController = TextEditingController();
   final confirmPasswordController = TextEditingController();
 
-  // Focus nodes — so we can move between fields with "Next" on the keyboard
+  // Focus nodes - so we can move between fields with "Next" on the keyboard
   final nameFocus = FocusNode();
   final emailFocus = FocusNode();
   final phoneFocus = FocusNode();
@@ -45,7 +45,7 @@ class _SignupScreenState extends State<SignupScreen> {
   String? _locationError;
   String? _passwordError;
   String? _confirmPasswordError;
-  // New inline errors for the dropdowns + terms checkbox (instead of snackbars)
+
   String? _bloodTypeError;
   String? _genderError;
   String? _termsError;
@@ -88,9 +88,6 @@ class _SignupScreenState extends State<SignupScreen> {
     super.dispose();
   }
 
-  // ============================================================
-  // Real-time validation (runs as user types)
-  // ============================================================
   void _validateEmailLive() {
     final text = emailController.text.trim();
     final valid = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(text);
@@ -113,9 +110,6 @@ class _SignupScreenState extends State<SignupScreen> {
     }
   }
 
-  // ============================================================
-  // Validation helpers
-  // ============================================================
   bool _isValidKenyanPhone(String phone) {
     final cleaned = phone.replaceAll(' ', '').replaceAll('-', '');
     final local = RegExp(r'^(07|01)\d{8}$');
@@ -198,7 +192,7 @@ class _SignupScreenState extends State<SignupScreen> {
       ok = false;
     }
 
-    // Inline errors for dropdowns + terms — no more stacked snackbars
+    // Inline errors for dropdowns
     if (selectedBloodType == null) {
       setState(() => _bloodTypeError = "Please select your blood type");
       ok = false;
@@ -218,11 +212,6 @@ class _SignupScreenState extends State<SignupScreen> {
     return ok;
   }
 
-  // ============================================================
-  // Submit — writes /users + /public_profiles atomically.
-  // If the Firestore write fails after auth user is created, we
-  // roll back the auth user so we don't leave an orphaned account.
-  // ============================================================
   Future<void> signUp() async {
     if (!_validateAll()) return;
 
@@ -237,7 +226,7 @@ class _SignupScreenState extends State<SignupScreen> {
 
       final uid = userCredential.user!.uid;
 
-      // 2. Send verification email (non-blocking — fake/test emails fail silently)
+      // 2. Send verification email (non-blocking - fake/test emails fail silently)
       try {
         await userCredential.user?.sendEmailVerification();
       } catch (_) {
@@ -245,15 +234,8 @@ class _SignupScreenState extends State<SignupScreen> {
       }
 
       // 3. Atomic batch write — private profile + public profile together.
-      //    Wrapped in its own try/catch so we can roll back the auth user
-      //    if Firestore write fails (otherwise we'd leave an orphan account
-      //    that can log in but has no profile).
       final batch = _firestore.batch();
 
-      // 3a. Private profile — full PII (incl. gender), only owner can read.
-      //     Gender lives ONLY here, never in public_profiles (data minimization).
-      //     email_verified removed — Firebase Auth is the source of truth via
-      //     FirebaseAuth.instance.currentUser?.emailVerified.
       final userRef = _firestore.collection('users').doc(uid);
       batch.set(userRef, {
         'uid': uid,
@@ -273,8 +255,6 @@ class _SignupScreenState extends State<SignupScreen> {
         'terms_version': LegalContent.termsVersion,
       });
 
-      // 3b. Public profile — minimum fields for donor matching only.
-      //     Gender deliberately NOT included here.
       final publicRef = _firestore.collection('public_profiles').doc(uid);
       batch.set(publicRef, {
         'blood_type': selectedBloodType,
@@ -287,14 +267,9 @@ class _SignupScreenState extends State<SignupScreen> {
       try {
         await batch.commit();
       } catch (firestoreError) {
-        // Roll back: delete the orphan auth user so the email is freed
-        // up for retry and we don't leave a half-created account.
         try {
           await userCredential.user?.delete();
         } catch (_) {
-          // Best-effort. If we can't delete, the user can't sign up again
-          // with this email until support intervenes — but that's better
-          // than silently letting them think it worked.
         }
         if (!mounted) return;
         setState(() => isLoading = false);
@@ -350,9 +325,6 @@ class _SignupScreenState extends State<SignupScreen> {
     );
   }
 
-  // ============================================================
-  // Build
-  // ============================================================
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -388,7 +360,6 @@ class _SignupScreenState extends State<SignupScreen> {
             children: [
               const SizedBox(height: AppSpace.md),
 
-              // Header
               Center(
                 child: Column(
                   children: [
@@ -405,7 +376,6 @@ class _SignupScreenState extends State<SignupScreen> {
 
               const SizedBox(height: AppSpace.xl),
 
-              // Full Name
               _Field(
                 label: "Full Name",
                 errorText: _nameError,
@@ -425,7 +395,6 @@ class _SignupScreenState extends State<SignupScreen> {
 
               const SizedBox(height: AppSpace.md),
 
-              // Email
               _Field(
                 label: "Email",
                 errorText: _emailError,
@@ -446,7 +415,6 @@ class _SignupScreenState extends State<SignupScreen> {
 
               const SizedBox(height: AppSpace.md),
 
-              // Phone
               _Field(
                 label: "Phone Number",
                 helper: "Used to contact you if a donor responds. "
@@ -469,7 +437,6 @@ class _SignupScreenState extends State<SignupScreen> {
 
               const SizedBox(height: AppSpace.md),
 
-              // Location
               _Field(
                 label: "Location",
                 errorText: _locationError,
@@ -489,7 +456,6 @@ class _SignupScreenState extends State<SignupScreen> {
 
               const SizedBox(height: AppSpace.md),
 
-              // Blood Type
               _Field(
                 label: "Blood Type",
                 helper: "Helps us match you with compatible blood requests.",
@@ -520,7 +486,6 @@ class _SignupScreenState extends State<SignupScreen> {
 
               const SizedBox(height: AppSpace.md),
 
-              // Gender — used only to calculate the donor's safe interval
               _Field(
                 label: "Gender",
                 helper: "Kenya recommends men donate every 3 months and "
@@ -555,7 +520,6 @@ class _SignupScreenState extends State<SignupScreen> {
 
               const SizedBox(height: AppSpace.md),
 
-              // Password
               _Field(
                 label: "Password",
                 helper: "At least 8 characters, with letters and numbers.",
@@ -588,7 +552,6 @@ class _SignupScreenState extends State<SignupScreen> {
 
               const SizedBox(height: AppSpace.md),
 
-              // Confirm Password
               _Field(
                 label: "Confirm Password",
                 errorText: _confirmPasswordError,
@@ -619,7 +582,6 @@ class _SignupScreenState extends State<SignupScreen> {
 
               const SizedBox(height: AppSpace.xl),
 
-              // Terms & Privacy consent
               Container(
                 padding: const EdgeInsets.all(AppSpace.md),
                 decoration: BoxDecoration(
@@ -697,7 +659,6 @@ class _SignupScreenState extends State<SignupScreen> {
                 ),
               ),
 
-              // Inline terms error — same pattern as other field errors
               if (_termsError != null)
                 Padding(
                   padding: const EdgeInsets.only(
@@ -726,7 +687,6 @@ class _SignupScreenState extends State<SignupScreen> {
                   ),
                 ),
 
-              // Tappable Terms / Privacy buttons (kept simple — separate row)
               Padding(
                 padding: const EdgeInsets.only(top: AppSpace.sm),
                 child: Row(
@@ -774,7 +734,6 @@ class _SignupScreenState extends State<SignupScreen> {
 
               const SizedBox(height: AppSpace.lg),
 
-              // Sign Up button
               Container(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(AppRadius.md),
@@ -812,7 +771,6 @@ class _SignupScreenState extends State<SignupScreen> {
 
               const SizedBox(height: AppSpace.lg),
 
-              // Login link
               Center(
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -843,9 +801,6 @@ class _SignupScreenState extends State<SignupScreen> {
     );
   }
 
-  // ============================================================
-  // Input decoration helper — supports error and valid states
-  // ============================================================
   InputDecoration _inputDecoration({
     required String hint,
     IconData? prefixIcon,
@@ -895,9 +850,6 @@ class _SignupScreenState extends State<SignupScreen> {
   }
 }
 
-// ============================================================
-// Field block — label + input + optional helper / error text
-// ============================================================
 class _Field extends StatelessWidget {
   final String label;
   final String? helper;
@@ -962,9 +914,6 @@ class _Field extends StatelessWidget {
   }
 }
 
-// ============================================================
-// DamuLink logo — pure Flutter, no image file needed
-// ============================================================
 class _DamuLinkLogo extends StatelessWidget {
   final double size;
   const _DamuLinkLogo({this.size = 32});
