@@ -174,7 +174,3 @@ Notification IDs are deterministic (`requestId_donorUid`) so that function retri
 | `notifications` | Per-donor in-app notifications | Recipient only |
 
 Blood-type compatibility follows standard medical rules (O− universal donor, AB+ universal recipient, Rh− recipients receive only Rh− blood) and is kept in sync between the client and the server-side matcher.
-
-## Status
-
-DamuLink is **feature-complete and working**, but **not yet published** to the Play Store. Because it handles health data, launching responsibly in Kenya means completing data-protection steps first — registration with the Office of the Data Protection Commissioner (ODPC) and a published privacy policy — before it goes live to real users.
